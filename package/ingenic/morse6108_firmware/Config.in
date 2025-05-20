@@ -1,0 +1,10 @@
+config BR2_PACKAGE_MORSE6108_FIRMWARE
+	bool "morse6108-firmware"
+	select BR2_PACKAGE_UTIL_LINUX_RFKILL
+	help
+	  copy morse6108 firmware to system
+
+config MORSE6108_FIRMWARE_FILE_PATH
+    depends on BR2_PACKAGE_MORSE6108_FIRMWARE
+	string "morse6108 firmware path"
+	default "/lib/firmware"

@@ -1,0 +1,30 @@
+diff -uprN pppd-2.4.6_orig/pppd/plugins/rp-pppoe/pppoe.h pppd-2.4.6/pppd/plugins/rp-pppoe/pppoe.h
+--- pppd-2.4.6_orig/pppd/plugins/rp-pppoe/pppoe.h	2014-01-02 12:42:08.000000000 +0800
++++ pppd-2.4.6/pppd/plugins/rp-pppoe/pppoe.h	2024-02-28 20:49:06.209637435 +0800
+@@ -84,7 +84,8 @@ typedef unsigned long UINT32_t;
+ #include <linux/if_ether.h>
+ #endif
+ 
+-#include <netinet/in.h>
++//#include <netinet/in.h>
++#include <linux/in.h>
+ 
+ #ifdef HAVE_NETINET_IF_ETHER_H
+ #include <sys/types.h>
+diff -uprN pppd-2.4.6_orig/pppd/pppcrypt.c pppd-2.4.6/pppd/pppcrypt.c
+--- pppd-2.4.6_orig/pppd/pppcrypt.c	2014-01-02 12:42:08.000000000 +0800
++++ pppd-2.4.6/pppd/pppcrypt.c	2024-02-28 20:48:19.219641583 +0800
+@@ -34,6 +34,13 @@
+ #include "pppd.h"
+ #include "pppcrypt.h"
+ 
++#define __libcrypt_version_reference(symbol, version) \
++  __asm__ (".symver " #symbol ", " #symbol "@" #version)
++extern void setkey (const char *); 
++extern void encrypt (const char *, int);
++__libcrypt_version_reference (setkey, GLIBC_2.0);
++__libcrypt_version_reference (encrypt, GLIBC_2.0);
++
+ static u_char
+ Get7Bits(input, startBit)
+ u_char *input;

@@ -1,0 +1,134 @@
+diff -ruN qt-4.8.7/src/gui/embedded/qmouselinuxinput_qws.cpp qt-4.8.7-2/src/gui/embedded/qmouselinuxinput_qws.cpp
+--- qt-4.8.7/src/gui/embedded/qmouselinuxinput_qws.cpp	2019-01-15 09:46:59.980120077 +0800
++++ qt-4.8.7-2/src/gui/embedded/qmouselinuxinput_qws.cpp	2019-01-15 09:45:45.596120298 +0800
+@@ -44,17 +44,24 @@
+ #include <QScreen>
+ #include <QSocketNotifier>
+ #include <QStringList>
++#include <QPoint>
++#include <QWindowSystemInterface>
++
++#include <qkbd_qws.h>
++
+ 
+ #include <qplatformdefs.h>
+ #include <private/qcore_unix_p.h> // overrides QT_OPEN
+ 
+ #include <errno.h>
++#include <termios.h>
++
++#include <linux/kd.h>
+ 
+ #include <linux/input.h>
+ 
+ QT_BEGIN_NAMESPACE
+ 
+-
+ class QWSLinuxInputMousePrivate : public QObject
+ {
+     Q_OBJECT
+@@ -72,7 +79,10 @@
+     QSocketNotifier *          m_notify;
+     int                        m_fd;
+     int                        m_x, m_y;
++    int                        min_id;
+     int                        m_buttons;
++    bool                       posChanged;
++    bool                       m_mt;
+ };
+ 
+ QWSLinuxInputMouseHandler::QWSLinuxInputMouseHandler(const QString &device)
+@@ -97,7 +107,7 @@
+ }
+ 
+ QWSLinuxInputMousePrivate::QWSLinuxInputMousePrivate(QWSLinuxInputMouseHandler *h, const QString &device)
+-    : m_handler(h), m_notify(0), m_x(0), m_y(0), m_buttons(0)
++    : m_handler(h), m_notify(0), m_x(0), m_y(0), m_buttons(0), posChanged(false), m_mt(false), min_id(10000)
+ {
+     setObjectName(QLatin1String("LinuxInputSubsystem Mouse Handler"));
+ 
+@@ -127,6 +137,9 @@
+ {
+     if (m_fd >= 0)
+         QT_CLOSE(m_fd);
++#ifdef QT_QPA_EXPERIMENTAL_TOUCHEVENT
++    delete d;
++#endif
+ }
+ 
+ void QWSLinuxInputMousePrivate::enable(bool on)
+@@ -168,21 +181,47 @@
+         if (data->type == EV_ABS) {
+             if (data->code == ABS_X) {
+                 m_x = data->value;
++                posChanged = true;
+             } else if (data->code == ABS_Y) {
+                 m_y = data->value;
++                posChanged = true;
++            } else if (data->code == ABS_MT_POSITION_X) {
++                m_x = data->value;
++            } else if (data->code == ABS_MT_POSITION_Y) {
++                m_y = data->value;
++            } else if (data->code == ABS_MT_TOUCH_MAJOR) {
++                if (data->value)
++                    m_buttons = Qt::LeftButton;
++                else {
++                    m_buttons = 0;
++                    m_mt = true;
++                }
++            } else if (data->code == ABS_MT_WIDTH_MAJOR) {
++                // nothing
++            } else if (data->code == ABS_MT_TOUCH_MINOR) {
++                //ignore for now...
++            } else if (data->code == ABS_MT_TRACKING_ID) {
++                if (data->value <= min_id) {
++                    min_id = data->value;
++                    m_mt = true;
++                } else
++                    m_mt = false;
+             } else {
+                 unknown = true;
+             }
+         } else if (data->type == EV_REL) {
+             if (data->code == REL_X) {
+                 m_x += data->value;
++                posChanged = true;
+             } else if (data->code == REL_Y) {
+                 m_y += data->value;
++                posChanged = true;
+             } else {
+                 unknown = true;
+             }
+         } else if (data->type == EV_KEY && data->code == BTN_TOUCH) {
+             m_buttons = data->value ? Qt::LeftButton : 0;
++            posChanged = true;
+         } else if (data->type == EV_KEY) {
+             int button = 0;
+             switch (data->code) {
+@@ -195,10 +234,22 @@
+             else
+                 m_buttons &= ~button;
+         } else if (data->type == EV_SYN && data->code == SYN_REPORT) {
+-            QPoint pos(m_x, m_y);
+-            pos = m_handler->transform(pos);
+-            m_handler->limitToScreen(pos);
+-            m_handler->mouseChanged(pos, m_buttons);
++            if (posChanged) {
++                posChanged = false;
++                QPoint pos(m_x, m_y);
++                pos = m_handler->transform(pos);
++                m_handler->limitToScreen(pos);
++                m_handler->mouseChanged(pos, m_buttons);
++            }
++        } else if (data->type == EV_SYN && data->code == SYN_MT_REPORT) {
++            if (m_mt) {
++                m_mt = false;
++                posChanged = false;
++                QPoint pos(m_x, m_y);
++                pos = m_handler->transform(pos);
++                m_handler->limitToScreen(pos);
++                m_handler->mouseChanged(pos, m_buttons);
++            }
+         } else if (data->type == EV_MSC && data->code == MSC_SCAN) {
+             // kernel encountered an unmapped key - just ignore it
+             continue;

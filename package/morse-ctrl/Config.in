@@ -1,0 +1,35 @@
+config BR2_PACKAGE_MORSE_CTRL
+	bool "morse-ctrl"
+	#depends on BR2_PACKAGE_MORSE_MOD
+	help
+		Morse Micro control tools.
+
+		http://www.morsemicro.com/
+
+config BR2_PACKAGE_MORSE_CTRL_VERSION
+	string "morsectrl version"
+	default "rel_1_8_1_2023_May_25"
+	depends on BR2_PACKAGE_MORSE_CTRL
+	help
+		Morse Micro control tools version
+
+config BR2_PACKAGE_MORSE_CTRL_TRANS_NL80211
+	bool "Transport - nl80211"
+	default y
+	depends on BR2_PACKAGE_MORSE_CTRL
+	select BR2_PACKAGE_LIBNL
+	help
+		Allows the use of the NL80211 (netlink) transport
+
+config BR2_PACKAGE_MORSE_CTRL_TRANS_FTDI_SPI
+	bool "Transport - ftdi spi"
+	default y
+	depends on BR2_PACKAGE_MORSE_CTRL
+	help
+		Allows the use of the FTDI SPI (SDIO over SPI) transport
+
+config BR2_PACKAGE_MORSE_CTRL_SANITISE
+	bool "sanitise"
+	depends on BR2_PACKAGE_MORSE_CTRL
+	help
+		Sanitises morse-ctrl source code

@@ -1,0 +1,11 @@
+
+
+menu "Ingenic"
+
+	source "package/ingenic/system_start_config/Config.in"
+	source "package/ingenic/bcm43438_firmware/Config.in"
+    source "package/ingenic/morse6108_firmware/Config.in"
+    source "package/ingenic/bcm43012_firmware/Config.in"
+    source "package/ingenic/bcm55512_firmware/Config.in"
+    source "package/ingenic/fcs96xfmac_firmware/Config.in"
+endmenu

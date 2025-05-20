@@ -1,0 +1,11 @@
+menuconfig BR2_PACKAGE_SYSTEM_START_CONFIG
+	bool "system start config"
+	help
+	  The ingenic customize for your system
+
+if BR2_PACKAGE_SYSTEM_START_CONFIG
+
+config SYSTEM_START_CONFIG_ADB_SERVICE
+	bool "enable adb service"
+
+endif # BR2_PACKAGE_SYSTEM_START_CONFIG

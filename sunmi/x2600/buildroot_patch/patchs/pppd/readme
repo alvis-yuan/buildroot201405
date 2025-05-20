@@ -1,0 +1,24 @@
+问题：pppd-2.4.6
+1、
+	pppcrypt.o: In function `DesSetkey':
+	pppcrypt.c:(.text.DesSetkey+0xa8): undefined reference to `setkey'
+	pppcrypt.o: In function `DesEncrypt':
+	pppcrypt.c:(.text.DesEncrypt+0x30): undefined reference to `encrypt'
+	pppcrypt.o: In function `DesDecrypt':
+	pppcrypt.c:(.text.DesDecrypt+0x30): undefined reference to `encrypt'
+2、
+	CloudPrinter_Project/output/host/usr/mipsel-buildroot-linux-gnu/sysroot/usr/include/linux/in.h:230:8: error: redefinition of 'struct sockaddr_in
+	CloudPrinter_Project/output/host/usr/mipsel-buildroot-linux-gnu/sysroot/usr/include/linux/in6.h:32:8: error: redefinition of 'struct in6_addr'
+	CloudPrinter_Project/output/host/usr/mipsel-buildroot-linux-gnu/sysroot/usr/include/linux/in6.h:49:8: error: redefinition of 'struct sockaddr_in6'
+	CloudPrinter_Project/output/host/usr/mipsel-buildroot-linux-gnu/sysroot/usr/include/linux/in6.h:59:8: error: redefinition of 'struct ipv6_mreq'
+参考资料：
+https://blog.csdn.net/weijuban5324/article/details/125597589
+实际操作：
+1、CloudPrinter_Project/output/build/pppd-2.4.6/pppd/pppcrypt.c 中文件头添加
+#define __libcrypt_version_reference(symbol, version) \
+  __asm__ (".symver " #symbol ", " #symbol "@" #version)
+extern void setkey (const char *); 
+extern void encrypt (const char *, int);
+__libcrypt_version_reference (setkey, GLIBC_2.0);
+__libcrypt_version_reference (encrypt, GLIBC_2.0);
+2、修改pppd/plugins/rp-pppoe/pppoe.h头文件，将 <netinet/in.h> 替换为 <linux/in.h>

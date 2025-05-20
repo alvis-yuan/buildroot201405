@@ -1,0 +1,22 @@
+diff -Naur squashfs4.2.orig/squashfs-tools/mksquashfs.c squashfs4.2/squashfs-tools/mksquashfs.c
+--- squashfs4.2.orig/squashfs-tools/mksquashfs.c	2011-03-01 06:24:09.000000000 +0800
++++ squashfs4.2/squashfs-tools/mksquashfs.c	2024-01-19 14:14:05.389433611 +0800
+@@ -49,6 +49,7 @@
+ #include <regex.h>
+ #include <fnmatch.h>
+ #include <sys/wait.h>
++#include <sys/sysmacros.h>
+ 
+ #ifndef linux
+ #define __BYTE_ORDER BYTE_ORDER
+diff -Naur squashfs4.2.orig/squashfs-tools/unsquashfs.c squashfs4.2/squashfs-tools/unsquashfs.c
+--- squashfs4.2.orig/squashfs-tools/unsquashfs.c	2011-03-01 06:27:06.000000000 +0800
++++ squashfs4.2/squashfs-tools/unsquashfs.c	2024-01-19 14:14:10.459436042 +0800
+@@ -31,6 +31,7 @@
+ 
+ #include <sys/sysinfo.h>
+ #include <sys/types.h>
++#include <sys/sysmacros.h>
+ 
+ struct cache *fragment_cache, *data_cache;
+ struct queue *to_reader, *to_deflate, *to_writer, *from_writer;

@@ -1,0 +1,11 @@
+config BR2_PACKAGE_WL_FMAC_MIPS32_STATIC
+	bool "wl_FMAC_MIPS32_static"
+	help
+		broadcom wireless control tools.
+
+config BR2_PACKAGE_WL_FMAC_MIPS32_STATIC_VERSION
+	string "wl version"
+	default "1118"
+	depends on BR2_PACKAGE_WL_FMAC_MIPS32_STATIC
+	help
+		broadcom wireless control tools version

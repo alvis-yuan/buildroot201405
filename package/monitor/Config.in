@@ -1,0 +1,4 @@
+config BR2_PACKAGE_MONITOR
+	bool "monitor"
+	help
+	  The Term Monitor.

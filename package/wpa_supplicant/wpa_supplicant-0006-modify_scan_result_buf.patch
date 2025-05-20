@@ -1,0 +1,24 @@
+diff -uprN wpa_supplicant-2.1_orig/wpa_supplicant/ctrl_iface.c wpa_supplicant-2.1/wpa_supplicant/ctrl_iface.c
+--- wpa_supplicant-2.1_orig/wpa_supplicant/ctrl_iface.c	2024-09-06 16:11:21.006816118 +0800
++++ wpa_supplicant-2.1/wpa_supplicant/ctrl_iface.c	2024-09-06 13:54:54.433298674 +0800
+@@ -5750,7 +5750,7 @@ char * wpa_supplicant_ctrl_iface_process
+ 					 char *buf, size_t *resp_len)
+ {
+ 	char *reply;
+-	const int reply_size = 4096;
++	const int reply_size = 8192;
+ 	int reply_len;
+ 
+ 	if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0 ||
+diff -uprN wpa_supplicant-2.1_orig/wpa_supplicant/wpa_cli.c wpa_supplicant-2.1/wpa_supplicant/wpa_cli.c
+--- wpa_supplicant-2.1_orig/wpa_supplicant/wpa_cli.c	2024-09-06 16:32:25.499004565 +0800
++++ wpa_supplicant-2.1/wpa_supplicant/wpa_cli.c	2024-09-06 13:53:59.485845567 +0800
+@@ -398,7 +398,7 @@ static void wpa_cli_msg_cb(char *msg, si
+ 
+ static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd, int print)
+ {
+-	char buf[4096];
++	char buf[8192];
+ 	size_t len;
+ 	int ret;
+ 

@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBZINT
+	bool "libzint"
+	select BR2_PACKAGE_LIBPNG
+	help
+	  A barcode generator and library.
+	  http://www.zint.org.uk
+	  

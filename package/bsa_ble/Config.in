@@ -1,0 +1,4 @@
+config BR2_PACKAGE_BSA_BLE
+	bool "bsa_ble"
+	help
+	  The BT bsa ble app.

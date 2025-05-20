@@ -1,0 +1,11 @@
+--- a/Makefile
++++ b/Makefile
+@@ -112,7 +112,7 @@
+ ifeq ($(IW_ANDROID_BUILD),)
+ iw:	$(OBJS)
+ 	@$(NQ) ' CC  ' iw
+-	$(Q)$(CC) $(LDFLAGS) $(OBJS) $(LIBS) -o iw
++	$(Q)$(CC) $(LDFLAGS) $(OBJS) $(LIBS) -lrt -o iw
+ endif
+ 
+ check:

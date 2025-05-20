@@ -1,0 +1,10 @@
+问题：fontconfig交叉编译报错
+	error: 'PRI_CHAR_WIDTH_STRONG' undeclared here
+	error: 'PRI_CHAR_WIDTH_WEAK' undeclared here
+参考资料：
+https://blog.csdn.net/qq_37376491/article/details/125948395
+https://bitcoin.stackexchange.com/questions/102228/compiling-a-statically-linked-binary-for-bitcoin-core-v0-12-0
+实际操作：
+  执行https://github.com/bitcoin/bitcoin/commit/3498a8d018fa02de17e1f9c4cda49f4c7edb3c6c 中
+  sed -i 's/CHAR_WIDTH/CHARWIDTH/g' fontconfig/fontconfig.h src/fcobjshash.gperf src/fcobjs.h src/fcobjshash.h
+  其操作和https://blog.csdn.net/qq_37376491/article/details/125948395一样

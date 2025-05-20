@@ -1,0 +1,32 @@
+--- a/Makefile
++++ b/Makefile
+@@ -15,6 +15,9 @@
+ override MORSECTRL_VERSION_STRING = "rel_1_11_3_2024_Mar_28"
+ DEFAULT_INTERFACE_NAME ?= "wlan0"
+ 
++# 特定编译选项--by sunmi
++SPECIAL_CFLAGS = -Wall -Werror -mnan=2008 -mgp32 -mfp64 -D_GNU_SOURCE
++
+ MORSECTRL_CFLAGS = $(CFLAGS)
+ MORSECTRL_CFLAGS += -Wall -Werror
+ MORSECTRL_CFLAGS += -DMORSECTRL_VERSION_STRING="\"$(MORSECTRL_VERSION_STRING)\""
+@@ -149,6 +152,19 @@
+ CLIENT_OBJS = $(patsubst %.c, %_cli.o, $(LINUX_SRCS) $(SRCS))
+ CLIENT_OBJS_WIN = $(patsubst %.c, %_cli_win.o, $(SRCS) $(WIN_SRCS))
+ 
++# 特定文件编译规则
++transport/nl80211_cli.o: transport/nl80211.c
++	@echo Compiling $<
++	$(Q) $(CC) $(MORSE_CLI_CFLAGS) $(LINUX_CFLAGS) $(SPECIAL_CFLAGS) -c -o $@ $<
++
++argtable3/argtable3_cli.o: argtable3/argtable3.c
++	@echo Compiling $<
++	$(Q) $(CC) $(SPECIAL_CFLAGS) -c -o $@ $<
++
++transport/transport_cli.o: transport/transport.c
++	@echo Compiling $<
++	$(Q) $(CC) $(SPECIAL_CFLAGS) -c -o $@ $<
++
+ %_cli.o: %.c $(DEPS)
+ 	@echo Compiling $<
+ 	$(Q) $(CC) $(MORSE_CLI_CFLAGS) $(LINUX_CFLAGS) -c -o $@ $<

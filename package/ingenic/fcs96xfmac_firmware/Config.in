@@ -1,0 +1,10 @@
+config BR2_PACKAGE_FCS96XFMAC_FIRMWARE
+	bool "fcs96xfmac-firmware"
+	select BR2_PACKAGE_UTIL_LINUX_RFKILL
+	help
+	  copy fcs96xfmac firmware to system
+
+config FCS96XFMAC_FIRMWARE_FILE_PATH
+    depends on BR2_PACKAGE_FCS96XFMAC_FIRMWARE
+	string "fcs96xfmac firmware path"
+	default "/lib/firmware/cypress"

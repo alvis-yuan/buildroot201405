@@ -1,0 +1,28 @@
+config BR2_PACKAGE_BCM55512_FIRMWARE
+	bool "bcm55512-firmware"
+	select BR2_PACKAGE_UTIL_LINUX_RFKILL
+	help
+	  copy bcm55512 firmware to system
+
+choice
+	prompt "bluetooth protocol stack select"
+	depends on BR2_PACKAGE_BCM55512_FIRMWARE
+	default BCM55512_FIRMWARE_BT_PROTOCOL_BTSTACK
+
+config BCM55512_FIRMWARE_BT_PROTOCOL_BLUEZ
+	bool "bluez"
+
+config BCM55512_FIRMWARE_BT_PROTOCOL_BTSTACK
+	bool "btstack"
+
+endchoice
+
+config BCM55512_FIRMWARE_FILE_PATH
+	depends on BR2_PACKAGE_BCM55512_FIRMWARE
+	string "bcm55512 firmware path"
+	default "/lib/firmware"
+
+config BCM55512_FIRMWARE_BT_UART_DEV_PATH
+	depends on BR2_PACKAGE_BCM55512_FIRMWARE
+	string "bcm55512 bt uart device path"
+	default "/dev/ttyS0"

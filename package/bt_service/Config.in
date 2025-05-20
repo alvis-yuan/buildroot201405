@@ -1,0 +1,4 @@
+config BR2_PACKAGE_BT_SERVICE
+	bool "bt_service"
+	help
+	  The bluetooth service.

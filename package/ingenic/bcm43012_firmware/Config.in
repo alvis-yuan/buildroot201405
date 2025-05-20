@@ -1,0 +1,11 @@
+config BR2_PACKAGE_BCM43012_FIRMWARE
+	bool "bcm43012-firmware"
+	select BR2_PACKAGE_UTIL_LINUX_RFKILL
+	help
+	  copy bcm43012 firmware to system
+
+
+config BCM43012_FIRMWARE_FILE_PATH
+	depends on BR2_PACKAGE_BCM43012_FIRMWARE
+	string "bcm43012 firmware path"
+	default "/lib/firmware/wifi_bcm"

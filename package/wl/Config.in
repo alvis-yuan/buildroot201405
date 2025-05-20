@@ -1,0 +1,11 @@
+config BR2_PACKAGE_WL
+	bool "wl"
+	help
+		keiiot wireless control tools.
+
+config BR2_PACKAGE_WL_VERSION
+	string "wl version"
+	default "0704"
+	depends on BR2_PACKAGE_WL
+	help
+		keiiot wireless control tools version

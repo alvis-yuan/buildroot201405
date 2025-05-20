@@ -1,0 +1,327 @@
+diff -ruN qt-4.8.7/src/gui/embedded/embedded.pri qt-4.8.7-2/src/gui/embedded/embedded.pri
+--- qt-4.8.7/src/gui/embedded/embedded.pri	2015-05-07 22:14:43.000000000 +0800
++++ qt-4.8.7-2/src/gui/embedded/embedded.pri	2019-06-27 17:14:37.313855409 +0800
+@@ -112,6 +112,7 @@
+         contains( gfx-drivers, linuxfb ) {
+ 	        HEADERS += embedded/qscreenlinuxfb_qws.h
+ 		SOURCES += embedded/qscreenlinuxfb_qws.cpp
++		LIBS += -losdClient -lrt
+ 	}
+ 
+         contains( gfx-drivers, qnx ) {
+diff -ruN qt-4.8.7/src/gui/embedded/qscreenlinuxfb_qws.cpp qt-4.8.7-2/src/gui/embedded/qscreenlinuxfb_qws.cpp
+--- qt-4.8.7/src/gui/embedded/qscreenlinuxfb_qws.cpp	2015-05-07 22:14:43.000000000 +0800
++++ qt-4.8.7-2/src/gui/embedded/qscreenlinuxfb_qws.cpp	2019-09-29 15:47:12.402142229 +0800
+@@ -62,19 +62,19 @@
+ #include <signal.h>
+ 
+ #include "qwindowsystem_qws.h"
+-
+-#if !defined(Q_OS_DARWIN) && !defined(Q_OS_FREEBSD)
+-#include <linux/fb.h>
+-
+-#ifdef __i386__
+-#include <asm/mtrr.h>
+-#endif
+-#endif
++#include <osd/OsdApi.h>
++#include <osd/ipu.h>
+ 
+ QT_BEGIN_NAMESPACE
+ 
+ extern int qws_client_id;
+ 
++//osd define
++int osd_ui;
++int osd_order = 0;
++struct osd_head_info osd_head;
++char osd_clientname[50];
++
+ //#define DEBUG_CACHE
+ 
+ class QLinuxFbScreenPrivate : public QObject
+@@ -197,6 +197,12 @@
+     }
+ }
+ 
++void *     refreshThreadForwarder(void * args)
++{
++    class QLinuxFbScreen * self = (class QLinuxFbScreen*)args;
++    self->refreshThreadRun();
++    return NULL;
++}
+ /*!
+     \internal
+ 
+@@ -257,6 +263,10 @@
+ #ifdef QT_QWS_CLIENTBLIT
+     setSupportsBlitInClients(true);
+ #endif
++    isDirty = 0;
++    pthread_mutex_init(&lk, NULL);
++    pthread_cond_init(&cv, NULL);
++    pthread_create(&refreshThread, NULL, refreshThreadForwarder, (void*)this);
+ }
+ 
+ /*!
+@@ -268,6 +278,17 @@
+ #ifdef QT_NO_QWS_SIGNALHANDLER
+     delete d_ptr;
+ #endif
++    void *ret;
++
++    pthread_mutex_lock(&lk);
++    osd_ui = 0;
++    osd_order =  0;
++    isDirty = -1;
++    pthread_mutex_unlock(&lk);
++    pthread_cond_broadcast(&cv);
++    pthread_join(refreshThread, &ret);
++    pthread_mutex_destroy(&lk);
++    pthread_cond_destroy(&cv);
+ }
+ 
+ /*!
+@@ -282,6 +303,48 @@
+     \sa disconnect()
+ */
+ 
++/*
++ * initOsdClient
++ * osd_layer < 4
++ */
++void initOsdClient(char *clientname, int layer_order){
++
++    //osd_head = (struct osd_head_info *)malloc(sizeof(struct osd_head_info));
++    //Note: init_osd_client must set unique client name for eache process!!
++   qWarning("init_osd_client, client name: %s osd order: %d", clientname, layer_order);
++   init_osd_client(clientname);
++   if (layer_order >= 0 && layer_order < 4)
++	   osd_order = layer_order;
++   else {
++	   qWarning("osd layer greater than 4, set the layer to the default value of 0");
++	   osd_order = 1;
++   }
++   osd_ui = 1;
++
++   get_osd_reserved_package (&osd_head);
++   qWarning("init_osd_client ok");
++}
++
++int QLinuxFbScreen::set_layer_info(struct osd_head_info *osd_head, int width,
++		int height, int x, int y, int order, int fmt, int out_fmt) {
++	osd_layers_param *layer = osd_head->layer;
++
++	layer->swidth = width;
++	layer->sheight = height;
++	layer->sstride = width << 2;
++	layer->dstride = layer->sstride;
++	layer->fmt = fmt;
++	layer->out_fmt = out_fmt;
++	layer->x = x;
++	layer->y = y;
++	layer->in_shm_off = get_osd_data_off(osd_head);
++	/* layer->out_shm_off = 0; */
++	layer->order = order;
++	layer->disable = 0;
++	return 0;
++}
++
++
+ bool QLinuxFbScreen::connect(const QString &displaySpec)
+ {
+     d_ptr->displaySpec = displaySpec;
+@@ -327,8 +390,7 @@
+             d_ptr->fd = QT_OPEN(dev.toLatin1().constData(), O_RDONLY);
+     }
+ 
+-    ::fb_fix_screeninfo finfo;
+-    ::fb_var_screeninfo vinfo;
++    finfo;
+     //#######################
+     // Shut up Valgrind
+     memset(&vinfo, 0, sizeof(vinfo));
+@@ -445,22 +507,29 @@
+ 
+     mapsize = finfo.smem_len;
+ 
+-    data = (unsigned char *)-1;
++    fbdata = (unsigned char *)-1;
+     if (d_ptr->fd != -1)
+-        data = (unsigned char *)mmap(0, mapsize, PROT_READ | PROT_WRITE,
++        fbdata = (unsigned char *)mmap(0, mapsize, PROT_READ | PROT_WRITE,
+                                      MAP_SHARED, d_ptr->fd, 0);
+ 
+-    if ((long)data == -1) {
++    if ((long)fbdata == -1) {
+         if (QApplication::type() == QApplication::GuiServer) {
+             perror("QLinuxFbScreen::connect");
+             qWarning("Error: failed to map framebuffer device to memory.");
+             return false;
+         }
+-        data = 0;
++        fbdata = 0;
+     } else {
+-        data += dataoffset;
++        fbdata += dataoffset;
+     }
+ 
++    if (osd_ui == 1) {
++		qWarning("set  data = osd_head.shm_mem");
++    	data = osd_head.shm_mem;
++	} else {
++		data = fbdata;
++	}
++
+     canaccel = useOffscreen();
+     if(canaccel)
+         setupOffScreen();
+@@ -525,9 +594,13 @@
+ 
+ void QLinuxFbScreen::disconnect()
+ {
+-    data -= dataoffset;
+-    if (data)
+-        munmap((char*)data,mapsize);
++    fbdata -= dataoffset;
++    if (fbdata)
++        munmap((char*)fbdata,mapsize);
++	if (osd_ui == 1) {
++		qWarning("disconnect. set osd_ui=0");
++		osd_ui = 0;
++	}
+     close(d_ptr->fd);
+ }
+ 
+@@ -677,8 +750,6 @@
+     d_ptr->openTty();
+ 
+     // Grab current mode so we can reset it
+-    fb_var_screeninfo vinfo;
+-    fb_fix_screeninfo finfo;
+     //#######################
+     // Shut up Valgrind
+     memset(&vinfo, 0, sizeof(vinfo));
+@@ -1132,8 +1203,6 @@
+     if (d_ptr->fd == -1)
+         return;
+ 
+-    fb_fix_screeninfo finfo;
+-    fb_var_screeninfo vinfo;
+     //#######################
+     // Shut up Valgrind
+     memset(&vinfo, 0, sizeof(vinfo));
+@@ -1240,11 +1309,41 @@
+     return sizeof(QLinuxFb_Shared);
+ }
+ 
++void QLinuxFbScreen::refreshThreadRun()
++{    
++    while (1) {
++        // qWarning("wait refresh reuqest");
++        pthread_mutex_lock(&lk);
++        while (isDirty == 0) {
++            pthread_cond_wait(&cv, &lk);
++        }
++        if (isDirty < 0) {
++            qWarning("refresh thread end");
++            pthread_mutex_unlock(&lk);
++            return;
++        }
++		if (osd_ui == 1) {
++			 int x = 0, y = 0, fmt, out_fmt;
++			fmt = HAL_PIXEL_FORMAT_BGRA_8888;
++			out_fmt = HAL_PIXEL_FORMAT_BGRA_8888;
++			set_layer_info(&osd_head,vinfo.xres, vinfo.yres, x, y, osd_order, fmt, out_fmt);
++			post_osd_package(&osd_head);
++		}
++        isDirty = 0;
++        pthread_mutex_unlock(&lk);
++        // qWarning("pan display");
++        if (osd_ui != 1){
++        	ioctl(d_ptr->fd, FBIOPAN_DISPLAY, &vinfo);
++        }
++    }
++}
++
+ /*!
+     \reimp
+ */
+ void QLinuxFbScreen::setDirty(const QRect &r)
+ {
++#if 0
+     if(d_ptr->driverType == EInk8Track) {
+         // e-Ink displays need a trigger to actually show what is
+         // in their framebuffer memory. The 8-Track driver does this
+@@ -1258,6 +1357,13 @@
+         else
+             ioctl(d_ptr->fd, 0x46a2, 0);
+     }
++#else
++    // qWarning("set dirty");
++    pthread_mutex_lock(&lk);
++    isDirty = 1;
++    pthread_cond_broadcast(&cv);
++    pthread_mutex_unlock(&lk);
++#endif
+ }
+ 
+ /*!
+@@ -1304,7 +1410,7 @@
+         if (memcmp(rgba, argb8888, 4 * sizeof(fb_bitfield)) == 0) {
+             format = QImage::Format_ARGB32;
+         } else if (memcmp(rgba, argb8888, 3 * sizeof(fb_bitfield)) == 0) {
+-            format = QImage::Format_RGB32;
++            format = QImage::Format_ARGB32;
+         } else if (memcmp(rgba, abgr8888, 3 * sizeof(fb_bitfield)) == 0) {
+             format = QImage::Format_RGB32;
+             pixeltype = QScreen::BGRPixel;
+@@ -1317,7 +1423,7 @@
+         const fb_bitfield bgr888[4] = {{0, 8, 0}, {8, 8, 0},
+                                        {16, 8, 0}, {0, 0, 0}};
+         if (memcmp(rgba, rgb888, 3 * sizeof(fb_bitfield)) == 0) {
+-            format = QImage::Format_RGB888;
++            format = QImage::Format_ARGB6666_Premultiplied;
+         } else if (memcmp(rgba, bgr888, 3 * sizeof(fb_bitfield)) == 0) {
+             format = QImage::Format_RGB888;
+             pixeltype = QScreen::BGRPixel;
+diff -ruN qt-4.8.7/src/gui/embedded/qscreenlinuxfb_qws.h qt-4.8.7-2/src/gui/embedded/qscreenlinuxfb_qws.h
+--- qt-4.8.7/src/gui/embedded/qscreenlinuxfb_qws.h	2015-05-07 22:14:43.000000000 +0800
++++ qt-4.8.7-2/src/gui/embedded/qscreenlinuxfb_qws.h	2019-07-19 15:33:16.098805083 +0800
+@@ -48,6 +48,15 @@
+ struct fb_var_screeninfo;
+ struct fb_fix_screeninfo;
+ 
++Q_CORE_EXPORT void initOsdClient(char *clientname, int layer_order); //osd_layer < 4
++#include <pthread.h>
++#if !defined(Q_OS_DARWIN) && !defined(Q_OS_FREEBSD)
++#include <linux/fb.h>
++
++#ifdef __i386__
++#include <asm/mtrr.h>
++#endif
++#endif
+ 
+ QT_BEGIN_HEADER
+ 
+@@ -122,8 +131,20 @@
+     void setupOffScreen();
+     void createPalette(fb_cmap &cmap, fb_var_screeninfo &vinfo, fb_fix_screeninfo &finfo);
+     void setPixelFormat(struct fb_var_screeninfo);
++    int set_layer_info(struct osd_head_info *osd_head,  int width, int height, int x, int y,  int is_csc, int fmt, int out_fmt);
+ 
+     QLinuxFbScreenPrivate *d_ptr;
++
++    uchar *           databuf;
++    uchar *           fbdata;
++    friend void *     refreshThreadForwarder(void * args);
++    void              refreshThreadRun();
++    pthread_t         refreshThread;
++    pthread_mutex_t   lk;
++    pthread_cond_t    cv;
++    int               isDirty;
++    fb_var_screeninfo vinfo;
++    fb_fix_screeninfo finfo;
+ };
+ 
+ #endif // QT_NO_QWS_LINUXFB

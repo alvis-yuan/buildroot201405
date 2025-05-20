@@ -1,0 +1,28 @@
+config BR2_PACKAGE_BCM43438_FIRMWARE
+	bool "bcm43438-firmware"
+	select BR2_PACKAGE_UTIL_LINUX_RFKILL
+	help
+	  copy bcm43438 firmware to system
+
+choice
+	prompt "bluetooth protocol stack select"
+	depends on BR2_PACKAGE_BCM43438_FIRMWARE
+	default BCM43438_FIRMWARE_BT_PROTOCOL_BSA
+
+config BCM43438_FIRMWARE_BT_PROTOCOL_BLUEZ
+	bool "bluez"
+
+config BCM43438_FIRMWARE_BT_PROTOCOL_BSA
+	bool "bsa"
+
+endchoice
+
+config BCM43438_FIRMWARE_FILE_PATH
+	depends on BR2_PACKAGE_BCM43438_FIRMWARE
+	string "bcm43438 firmware path"
+	default "/lib/firmware"
+
+config BCM43438_FIRMWARE_BT_UART_DEV_PATH
+	depends on BR2_PACKAGE_BCM43438_FIRMWARE
+	string "bcm43438 bt uart device path"
+	default "/dev/ttyS0"

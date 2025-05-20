@@ -1,0 +1,4 @@
+config BR2_PACKAGE_TM
+	bool "tm"
+	help
+	  The Term Manager.
